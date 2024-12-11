@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة وقت الحصة</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            direction: rtl;
+        }
+        #logo {
+            display: block;
+            margin: 0 auto 20px;
+            width: 200px;
+            height: auto;
+        }
+        #controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #timeline {
+            margin: 40px auto;
+            width: 80%;
+            height: 50px;
+            background-color: #eaeaea;
+            border-radius: 10px;
+            position: relative;
+            display: flex;
+        }
+        .timeline-segment {
+            flex: 1;
+            border-right: 1px solid #ccc;
+            background-color: #f4f4f4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .timeline-segment:last-child {
+            border-right: none;
+        }
+        .segment {
+            position: absolute;
+            background-color: #6a1b9a;
+            color: white;
+            border-radius: 5px;
+            padding: 5px;
+            cursor: move;
+        }
+        .segment:hover {
+            background-color: #4a148c;
+        }
+        .segment .remove {
+            background-color: red;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+        .countdown {
+            font-size: 12px;
+            position: absolute;
+            bottom: -20px;
+            right: 10px;
+        }
+        #objectives {
+            display: flex;
+            justify-content: center;
+            margin: 20px auto;
+            gap: 10px;
+        }
+        .objective {
+            background-color: #00897b;
+            color: white;
+            border-radius: 5px;
+            padding: 10px;
+            cursor: grab;
+        }
+        .objective:active {
+            cursor: grabbing;
+        }
+        button {
+            padding: 10px 20px;
+            margin-top: 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            background-color: #6a1b9a;
+            color: white;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        input {
+            padding: 5px;
+            width: 100px;
+            margin-top: 5px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <img id="logo" src="https://drive.google.com/uc?export=view&id=1GZ-_pMlvXBiNeJFcdAGWB5KSvL7E2vu8" alt="شعار علم بسعادة">
+    <h1>أداة إدارة وقت الحصة</h1>
+    <p>قم بإدارة وقت الحصة بسهولة عن طريق إضافة الأهداف الزمنية وسحبها إلى الخط الزمني.</p>
+    <div id="controls">
+        <div class="control">
+            <label for="sectionName">اسم القسم</label>
+            <input type="text" id="sectionName" placeholder="اسم القسم">
+        </div>
+        <div class="control">
+            <label for="sectionTime">الوقت بالدقائق</label>
+            <input type="number" step="0.5" id="sectionTime" placeholder="الوقت" min="0.5">
+        </div>
+        <button id="addSection">إضافة قسم</button>
+    </div>
+    <div id="objectives"></div>
+    <div id="timeline">
+        <!-- Divisions of timeline -->
+        <div class="timeline-segment"></div>
+        <div class="timeline-segment"></div>
+        <div class="timeline-segment"></div>
+        <div class="timeline-segment"></div>
+        <div class="timeline-segment"></div>
+        <div class="timeline-segment"></div>
+        <div class="timeline-segment"></div>
+        <div class="timeline-segment"></div>
+        <div class="timeline-segment"></div>
+        <div class="timeline-segment"></div>
+    </div>
+    <button id="startTimer" disabled>بدء المؤقت</button>
+
+    <script>
+        const sectionNameInput = document.getElementById('sectionName');
+        const sectionTimeInput = document.getElementById('sectionTime');
+        const addSectionButton = document.getElementById('addSection');
+        const objectivesContainer = document.getElementById('objectives');
+        const timeline = document.getElementById('timeline');
+        const startButton = document.getElementById('startTimer');
+
+        let timelineSegments = [];
+
+        addSectionButton.addEventListener('click', () => {
+            console.log('زر إضافة القسم تم الضغط عليه');
+
+            const sectionName = sectionNameInput.value.trim();
+            const sectionTime = parseFloat(sectionTimeInput.value);
+
+            if (!sectionName) {
+                alert('يرجى إدخال اسم القسم.');
+                console.log('خطأ: إدخال اسم القسم فارغ.');
+                return;
+            }
+
+            if (isNaN(sectionTime) || sectionTime <= 0) {
+                alert('يرجى إدخال وقت صحيح بالقيم الدقيقة (أكبر من 0).');
+                console.log('خطأ: إدخال الوقت غير صحيح:', sectionTime);
+                return;
+            }
+
+            const objective = document.createElement('div');
+            objective.className = 'objective';
+            objective.textContent = `${sectionName} (${sectionTime} دقائق)`;
+            objective.setAttribute('draggable', 'true');
+            objective.setAttribute('data-duration', sectionTime);
+
+            objective.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', JSON.stringify({
+                    name: sectionName,
+                    duration: sectionTime
+                }));
+                console.log('بدأ السحب:', { name: sectionName, duration: sectionTime });
+            });
+
+            objectivesContainer.appendChild(objective);
+            console.log('تمت إضافة القسم بنجاح:', { name: sectionName, duration: sectionTime });
+
+            sectionNameInput.value = '';
+            sectionTimeInput.value = '';
+        });
+
+        timeline.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        timeline.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+
+            const segment = document.createElement('div');
+            segment.className = 'segment';
+            segment.textContent = `${data.name}`;
+            segment.style.width = `${data.duration * 10}px`;
+            segment.style.left = `${timelineSegments.reduce((acc, seg) => acc + seg.duration * 10, 0)}px`;
+
+            const countdown = document.createElement('div');
+            countdown.className = 'countdown';
+            countdown.textContent = `${data.duration}:00`;
+
+            const removeButton = document.createElement('button');
+            removeButton.className = 'remove';
+            removeButton.textContent = 'إزالة';
+            removeButton.addEventListener('click', () => {
+                timelineSegments = timelineSegments.filter(seg => seg !== segmentData);
+                segment.remove();
+                if (timelineSegments.length === 0) startButton.disabled = true;
+            });
+
+            segment.appendChild(countdown);
+            segment.appendChild(removeButton);
+
+            const segmentData = { name: data.name, duration: parseFloat(data.duration), element: countdown };
+            timelineSegments.push(segmentData);
+            timeline.appendChild(segment);
+
+            startButton.disabled = false;
+            console.log('تمت إضافة المقطع الزمني:', segmentData);
+        });
+
+        startButton.addEventListener('click', () => {
+            const timerWindow = window.open('', '', 'width=800,height=600');
+            timerWindow.document.write('<!DOCTYPE html><html lang="ar"><head><title>العد التنازلي</title><style>body{font-family: Arial, sans-serif; text-align: center; padding: 20px; direction: rtl;} #timeline{margin: 20px auto; width: 80%; height: 50px; background-color: #eaeaea; border-radius: 10px; display: flex;} .timeline-segment{flex: 1; border-right: 1px solid #ccc; background-color: #f4f4f4; display: flex; align-items: center; justify-content: center;} .timeline-segment:last-child{border-right: none;} .countdown{font-size: 20px;}</style></head><body><div id="timeline"></div></body></html>');
+
+            const timerDocument = timerWindow.document;
+            const timelineDiv = timerDocument.getElementById('timeline');
+
+            function startCountdown(index) {
+                if (index >= timelineSegments.length) return;
+
+                const segment = timelineSegments[index];
+                const segmentDiv = timerDocument.createElement('div');
+                segmentDiv.className = 'timeline-segment';
+                const title = timerDocument.createElement('div');
+                title.style.fontSize = '18px';
+                title.style.fontWeight = 'bold';
+                title.textContent = segment.name;
+                const countdown = timerDocument.createElement('div');
+                countdown.className = 'countdown';
+                countdown.textContent = `${segment.duration}:00`;
+                segmentDiv.appendChild(title);
+                segmentDiv.appendChild(countdown);
+                timelineDiv.appendChild(segmentDiv);
+
+                let remainingTime = segment.duration * 60;
+                const interval = setInterval(() => {
+                    if (remainingTime > 0) {
+                        remainingTime--;
+                        const minutes = Math.floor(remainingTime / 60);
+                        const seconds = remainingTime % 60;
+                        countdown.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    } else {
+                        clearInterval(interval);
+                        countdown.textContent = 'انتهى';
+                        startCountdown(index + 1);
+                    }
+                }, 1000);
+            }
+
+            startCountdown(0);
+        });
+    </script>
+</body>
+</html>
